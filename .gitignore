@@ -4,3 +4,5 @@ venv/
 .vim/
 .mypy_cache/
 .env
+.script.py
+*.sqlite
