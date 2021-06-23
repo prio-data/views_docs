@@ -1,30 +1,20 @@
 import os
-import asyncio
 import logging
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple
 import json
 from abc import ABC
 from sqlalchemy import orm
 import aiohttp
-from . import dals, exceptions
+from . import exceptions
 
 logger = logging.getLogger(__name__)
 
 class RemoteContentApi(ABC):
     __list_key__ = "data"
-    __annotation_key__ = "doc"
 
-    __annotation_category__: Optional[str] = "documentation"
-
-    def __init__(self, base_url, client: aiohttp.ClientSession, session: orm.Session):
+    def __init__(self, base_url, client: aiohttp.ClientSession):
         self._base_url = base_url
         self._client = client
-        self._session = session
-
-        if self.__annotation_category__ is not None:
-            self._dal = dals.PageDal(self._session)
-        else:
-            self._dal = None
 
     async def _fetch(self,url):
         logger.debug("Fetching %s", url)
@@ -49,46 +39,19 @@ class RemoteContentApi(ABC):
 
         return data
 
-    async def show(self, key: str):
+    async def get(self, key: str):
         url = os.path.join(self._base_url, key)
-        data_request = self._fetch_json(url)
-
-        if self._dal:
-            logger.debug("Getting annotation for %s - %s",
-                    self.__annotation_category__, key)
-            annotation_request = self._dal.content(self.__annotation_category__, key)
-        else:
-            annotation = ""
-
-        data, annotation = await asyncio.gather(data_request, annotation_request)
-
-        #data = await data_request
-        #annotation = await annotation_request
-        data[self.__annotation_key__] = annotation
-
+        data = await self._fetch_json(url)
         return data
 
-class DatabaseTableApi(RemoteContentApi):
+class TableApi(RemoteContentApi):
     __list_key__ = "tables"
-    __annotation_category__ = None
 
-    async def show(self, key:str):
-        """
-        Returns a column API rather than just the column name
-        """
-        return DatabaseColumnApi(self._base_url+"/"+key, self._client, self._session)
-
-class DatabaseColumnApi(RemoteContentApi):
+class ColumnApi(RemoteContentApi):
     __list_key__ = "columns"
 
-    __annotation_dal__ = dals.PageDal
-    __annotation_category__ = "column"
-
-class TransformsApi(RemoteContentApi):
+class TransformApi(RemoteContentApi):
     __list_key__ = "transforms"
-
-    __annotation_dal__ = dals.PageDal
-    __annotation_category__ = "transform"
 
     async def list(self):
         data = await super().list()

@@ -4,17 +4,9 @@ from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from pydantic import BaseModel
+from . import schema
 
 Base = declarative_base()
-
-class DocumentationPageSchema(BaseModel):
-    name: str
-    category: str
-    last_edited: datetime
-    author: Optional[str] = None
-
-class DocumentationPageDetailSchema(DocumentationPageSchema):
-    content: str
 
 class DocumentationPage(Base):
     __tablename__ = "documentation_page"
@@ -32,7 +24,7 @@ class DocumentationPage(Base):
 
 
     def list_schema(self):
-        return DocumentationPageSchema(
+        return schema.DocumentationPageSchema(
                 name = self.name,
                 category = self.category,
                 last_edited = self.last_edited,
@@ -40,7 +32,7 @@ class DocumentationPage(Base):
             )
 
     def detail_schema(self):
-        return DocumentationPageDetailSchema(
+        return schema.DocumentationPageDetailSchema(
                 name = self.name,
                 category = self.category,
                 last_edited = self.last_edited,
