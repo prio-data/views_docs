@@ -1,12 +1,16 @@
 
-from sqlalchemy import create_engine
+
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
-from . import models
+from .settings import config
 
-sync_engine = create_engine("sqlite:///tmp.sqlite")
-models.Base.metadata.create_all(sync_engine)
+DB_URL = (f"postgresql+asyncpg://{config('DB_USER')}@{config('DB_HOST')}/{config('DOCS_DB_NAME')}"
+    f"?sslcert={config('SSLCERT')}"
+    f"&sslkey={config('SSLKEY')}"
+    f"&sslrootcert={config('SSLROOTCERT')}"
+    "&ssl=require"
+    )
 
-engine = create_async_engine("sqlite+aiosqlite:///tmp.sqlite")
+engine = create_async_engine(DB_URL, echo = True)
 Session = sessionmaker(bind = engine, class_ = AsyncSession)
