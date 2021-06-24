@@ -58,14 +58,3 @@ class TransformApi(RemoteContentApi):
         for entry in data:
             entry["path"] = entry["level_of_analysis"]+"/"+entry["namespace"]+ "." +entry["name"]
         return data
-
-class RemotesRegistry:
-    def __init__(self):
-        self.remotes: Dict[str, Tuple[RemoteContentApi, str]] = dict()
-
-    def register(self, name: str, remote_url: str, api_class = RemoteContentApi):
-        self.remotes[name] = (remote_url, api_class)
-
-    def api(self, name, client: aiohttp.ClientSession, session: orm.Session):
-        url, api_class = self.remotes[name]
-        return api_class(url, client, session)
