@@ -1,64 +1,87 @@
 
-import logging
+import asyncio
+from typing import Protocol, Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiohttp import ClientSession
 from fastapi import FastAPI, Depends, Response
-from . import operations, schema, db, settings, __version__
+from . import operations, schema, models, db, settings, __version__
 
 app = FastAPI()
 
-async def get_session()-> AsyncSession:
-    async with db.Session() as session:
-        yield session
+class CrudOperations(Protocol):
+    async def add(self, key:str, to_add:schema.PostedDocumentation)-> None:
+        """
+        Add posted data to the documentation database, under the provided key
+        """
+        pass
+    async def get(self, key:str) -> models.DocumentationPage :
+        """
+        Get documentation pertaining to the key
+        """
+        pass
+    async def list(self) -> List[schema.DocumentationPage]:
+        """
+        List available documentation
+        """
+        pass
 
-async def get_http_client()-> ClientSession:
+async def get_ops(
+        kind:str,
+        name:Optional[str] = None)-> Optional[CrudOperations]:
     async with ClientSession() as http_client:
-        yield http_client
+        async with db.Session() as session:
+            base_url = settings.remote(kind)
+            args = [base_url, session, http_client]
+
+            if kind == "tables":
+                ops = operations.TableDocumentationOperations
+            elif kind == "transforms":
+                ops = operations.TransformDocumentationOperations
+            elif kind == "columns":
+                ops = operations.ColumnDocumentationOperations
+                args.append(name)
+            else:
+                yield None
+            yield ops(*args)
 
 @app.get("/")
 def handshake():
-    return {"version": __version__}
+    return {"version":__version__}
 
-@app.get("/tables/{table_name:str}")
-async def get_table_doc(
-        table_name: str,
-        session = Depends(get_session), client = Depends(get_http_client)):
-    table_operations = operations.TableDocumentationOperations(
-            settings.remote("tables"), session, client
-            )
-    data = await table_operations.get(table_name)
-    return data
+@app.get("/{kind:str}")
+async def list(ops:Optional[CrudOperations] = Depends(get_ops)):#-> List[schema.DocumentationPage]:
+    if ops is None:
+        return Response(status_code = 404)
+    pages = await ops.list()
+    return pages
 
-@app.post("/tables/{table_name:str}")
-async def post_table_doc(
-        table_name: str,
-        posted: schema.PostedDocumentation,
-        session = Depends(get_session), client = Depends(get_http_client)):
-    table_operations = operations.TableDocumentationOperations(
-            settings.remote("tables"), session, client
-            )
-    data = await table_operations.add(table_name, posted.content)
-    await session.commit()
-    return data
+@app.get("/{kind:str}/{name:str}")
+async def show(name:str, ops:Optional[CrudOperations] = Depends(get_ops)
+        ) -> schema.AnnotatedProxiedDocumentation:
+    if ops is None:
+        return Response(status_code = 404)
+    page = await ops.get(name)
+    return page
 
-@app.get("/tables/{table_name:str}/{column_name:str}")
-async def get_column_doc(
-        table_name: str, column_name: str,
-        session = Depends(get_session), client = Depends(get_http_client)):
-    column_operations = operations.ColumnDocumentationOperations(
-            settings.remote("tables"), session, client, table_name
-            )
-    data = await column_operations.get(table_name+"/"+column_name)
-    return data
+@app.post("/tables/{name:str}/")
+async def post(name:str, posted:schema.PostedDocumentation,
+        ops:Optional[CrudOperations] = Depends(get_ops)) -> Response:
+    if ops is None:
+        return Response(status_code = 404)
+    await ops.add(name, posted)
+    return Response(status_code = 201)
 
-@app.post("/tables/{table_name:str}/{column_name:str}")
-async def post_column_doc(
-        table_name: str, column_name: str,
-        posted: schema.PostedDocumentation,
-        session = Depends(get_session), client = Depends(get_http_client)):
-    column_operations = operations.ColumnDocumentationOperations(
-            settings.remote("tables"), session, client, table_name
-            )
-    data = await column_operations.add(table_name+"/"+column_name, posted.content)
-    await session.commit()
-    return data
+@app.get("/{kind:str}/{name:str}/{sub_name:str}")
+async def show_sub(name:str, sub_name:str, ops:Optional[CrudOperations] = Depends(get_ops)):
+    if ops is None:
+        return Response(status_code = 404)
+    page = await ops.get(name+"/"+sub_name)
+    return page
+
+@app.post("/{kind:str}/{name:str}/{sub_name:str}")
+async def post_sub(name:str, sub_name:str, posted:schema.PostedDocumentation,
+        ops:Optional[CrudOperations] = Depends(get_ops)) -> Response:
+    if ops is None:
+        return Response(status_code = 404)
+    await ops.add(name+"/"+sub_name, posted)
+    return Response(status_code = 201)

@@ -22,15 +22,15 @@ class DocumentationPage(Base):
 
 
     def list_schema(self):
-        return schema.DocumentationPageSchema(
+        return schema.DocumentationPage(
                 name = self.name,
                 category = self.category,
                 last_edited = self.last_edited,
                 author = self.author,
             )
 
-    def detail_schema(self):
-        return schema.DocumentationPageDetailSchema(
+    def detail_schema(self) -> schema.DocumentationPageDetail:
+        return schema.DocumentationPageDetail(
                 name = self.name,
                 category = self.category,
                 last_edited = self.last_edited,

@@ -2,18 +2,21 @@ from datetime import datetime
 from typing import Any, Optional
 from pydantic import BaseModel
 
-class DocumentationPageSchema(BaseModel):
+class DocumentationPage(BaseModel):
     name: str
     category: str
-    last_edited: datetime
+    last_edited: Optional[datetime]
     author: Optional[str] = None
 
-class DocumentationPageDetailSchema(DocumentationPageSchema):
+class DocumentationPageDetail(DocumentationPage):
     content: str
 
 class PostedDocumentation(BaseModel):
-    content: str
+    content: str = ""
 
-class Documentation(BaseModel):
+class AnnotatedProxiedDocumentation(BaseModel):
     proxied: Any
-    documentation: Optional[DocumentationPageDetailSchema]
+    documentation: Optional[DocumentationPageDetail] = {"content": ""}
+
+class RemoteLocation(BaseModel):
+    path: str

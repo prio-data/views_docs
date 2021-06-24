@@ -1,11 +1,12 @@
+from typing import List
 import os
 import logging
-from typing import Dict, Tuple
+import re
+from urllib.parse import urlparse, urlunparse
 import json
 from abc import ABC
-from sqlalchemy import orm
 import aiohttp
-from . import exceptions
+from . import schema
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,15 @@ class RemoteContentApi(ABC):
         self._base_url = base_url
         self._client = client
 
+    def _remote_to_local_url(self, url: str)-> str:
+        return url
+
+    def _local_to_remote_url(self, url: str)-> str:
+        return url
+
     async def _fetch(self,url):
+        logging.critical(url)
+        url = self._local_to_remote_url(url)
         logger.debug("Fetching %s", url)
         async with self._client.get(url) as response:
             content = await response.text()
@@ -25,18 +34,19 @@ class RemoteContentApi(ABC):
 
     async def _fetch_json(self,url):
         content = await self._fetch(url)
-        return json.loads(content)
+        if content:
+            return json.loads(content)
+        else:
+            return dict()
 
-    async def list(self):
+    async def list(self) -> List[schema.RemoteLocation]:
         raw_data = await self._fetch_json(self._base_url)
         try:
             listed_data = raw_data[self.__list_key__]
         except KeyError:
-            raise exceptions.RemoteError(raw_data,
-                    f"Could not index with {self.__list_key__} to get list of values.")
+            return []
 
         data = [e if not isinstance(e,str) else {"path":e} for e in listed_data]
-
         return data
 
     async def get(self, key: str):
@@ -53,8 +63,21 @@ class ColumnApi(RemoteContentApi):
 class TransformApi(RemoteContentApi):
     __list_key__ = "transforms"
 
+    def _remote_to_local_url(self, url):
+        url = re.sub(r"/(?=(?:[^.]+\.?){2}$)",".",url)
+        return url
+
+    def _local_to_remote_url(self, url):
+        logging.critical(url)
+        parsed = urlparse(url)
+        path = re.sub(r"\.","/",parsed.path,1)
+        url = urlunparse(parsed._replace(path = path) )
+        logging.critical(url)
+        return url
+
     async def list(self):
         data = await super().list()
         for entry in data:
-            entry["path"] = entry["level_of_analysis"]+"/"+entry["namespace"]+ "." +entry["name"]
+            remote_url = entry["level_of_analysis"]+"/"+entry["namespace"]+ "." +entry["name"]
+            entry["path"] = self._remote_to_local_url(remote_url)
         return data
