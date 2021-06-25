@@ -9,7 +9,7 @@ class DocumentationPage(BaseModel):
     author: Optional[str] = None
 
 class DocumentationPageDetail(DocumentationPage):
-    content: str
+    content: Optional[str] = None
 
 class PostedDocumentation(BaseModel):
     content: str = ""

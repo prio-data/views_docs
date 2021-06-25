@@ -8,16 +8,9 @@ env = Env()
 
 remote_config = views_config(env.str("KEY_VAULT_URL"), DefaultAzureCredential())
 
-defaults = {
-    "TABLES_URL": env.str("BASE_DATA_RETRIEVER_URL"),
-    "COLUMNS_URL": env.str("BASE_DATA_RETRIEVER_URL"),
-    "TRANSFORMS_URL": env.str("TRANSFORMER_URL"),
-    }
-
 @lru_cache(maxsize=None)
 def config(key: str):
     return seek_config(resolvers = [
-            lambda k: defaults[k],
             remote_config
         ])(key)
 

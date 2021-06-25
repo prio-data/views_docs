@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, List
 import asyncio
 from abc import ABC, abstractmethod
@@ -5,6 +6,8 @@ from abc import ABC, abstractmethod
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiohttp import ClientSession
 from . import dals, remotes, schema
+
+logger = logging.getLogger(__name__)
 
 class DocumentationOperations(ABC):
     """
@@ -21,8 +24,15 @@ class DocumentationOperations(ABC):
         pass
 
     def __init__(self, base_url: str, session: AsyncSession, http_client: ClientSession):
-        self._dal = dals.PageDal(session, self.__category_name__, prefix = self.__prefix__)
-        self._api = self.__api_class__(base_url, http_client)
+        self._dal = dals.PageDal(
+                session,
+                self.__category_name__,
+                prefix = self.__prefix__,
+            )
+        self._api = self.__api_class__(
+                base_url,
+                http_client,
+                )
 
     async def get(self, path: str) -> schema.AnnotatedProxiedDocumentation:
         data, documentation = await asyncio.gather(
@@ -34,8 +44,9 @@ class DocumentationOperations(ABC):
                     documentation = documentation
                 )
 
-    async def add(self, path: str, content: str, author: Optional[str] = None) -> None:
-        await self._dal.add(path, content, author)
+    async def add(self, 
+            path: str, posted: schema.PostedDocumentation, author: Optional[str] = None) -> None:
+        await self._dal.add(path, posted.content, author)
 
     async def list(self) -> List[schema.RemoteLocation]:
         pages = await self._api.list()
@@ -56,5 +67,6 @@ class ColumnDocumentationOperations(DocumentationOperations):
     def __init__(self, base_url: str,
             session: AsyncSession, http_client: ClientSession,
             table_name: str):
+        logger.critical("It's a column")
         self.__category_name__ = table_name
         super().__init__(base_url, session, http_client)

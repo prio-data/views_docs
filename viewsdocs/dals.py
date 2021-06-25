@@ -28,7 +28,7 @@ class AsyncDal(ABC):
     async def _new(self, primary_key):
         instance = self.__db_model__(*primary_key)
         self._session.add(instance)
-        self._session.commit()
+        await self._session.commit()
         return instance
 
     async def _get_or_create(self, primary_key) -> Optional[Any]:
@@ -86,13 +86,14 @@ class PageDal(AsyncDal):
         """
         primary_key = self._path_to_pk(path)
 
-        logger.debug("Annotating %s (%s chr)",
+        logger.critical("Annotating %s (%s chr)",
                 primary_key,
                 str(len(content)))
 
         page = await self._get_or_create(primary_key)
         page.content = content
         page.last_edited = datetime.now()
+        await self._session.commit()
         if author:
             page.author = author
         return page
