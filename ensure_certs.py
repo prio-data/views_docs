@@ -18,8 +18,16 @@ def ensure_certs():
     client = SecretClient(os.getenv("KEY_VAULT_URL"),DefaultAzureCredential())
 
     for secret_name, file_name in to_get:
-        path = os.path.expanduser(os.path.join("~/.postgresql",file_name))
-        if not os.path.exists:
+        folder = os.path.expanduser("~/.postgresql")
+        try:
+            os.makedirs(folder)
+        except FileExistsError:
+            pass
+        else:
+            logger.warning("Made .postgresql dir")
+
+        path = os.path.join(folder,file_name)
+        if not os.path.exists(path):
             with open(path, "w") as f:
                 f.write(client.get_secret(secret_name).value)
         else:
