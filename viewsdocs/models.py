@@ -2,7 +2,7 @@
 from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime
 from sqlalchemy.ext.declarative import declarative_base
-from . import schema
+import views_schema as schema
 
 Base = declarative_base()
 
@@ -14,7 +14,7 @@ class DocumentationPage(Base):
 
     last_edited = Column(DateTime, default = datetime.now)
     content= Column(Text)
-    author = Column(String)
+    author = Column(String, default = lambda: "anonymous", nullable = False)
 
     def __init__(self, category: str, name: str):
         self.category = name
@@ -22,7 +22,7 @@ class DocumentationPage(Base):
 
 
     def list_schema(self):
-        return schema.DocumentationPage(
+        return schema.DocumentationPageListEntry(
                 name = self.name,
                 category = self.category,
                 last_edited = self.last_edited,
@@ -30,10 +30,6 @@ class DocumentationPage(Base):
             )
 
     def detail_schema(self) -> schema.DocumentationPageDetail:
-        return schema.DocumentationPageDetail(
-                name = self.name,
-                category = self.category,
-                last_edited = self.last_edited,
-                author = self.author,
-                content = self.content,
-            )
+        base_schema = self.list_schema().dict()
+        base_schema["content"] = self.content
+        return schema.DocumentationPageDetail(**base_schema)

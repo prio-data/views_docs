@@ -1,72 +1,51 @@
 import logging
 from typing import Optional, List
 import asyncio
-from abc import ABC, abstractmethod
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiohttp import ClientSession
-from . import dals, remotes, schema
+import views_schema as schema
+from . import dals, remotes
 
 logger = logging.getLogger(__name__)
 
-class DocumentationOperations(ABC):
+class DocumentationOperations():
     """
     A set of operations for fetching documentation data from both the
     documentation database and endpoints exposed by remote services.
     """
-    __doc_key__ = "doc"
-    __category_name__ = "doc"
-    __prefix__ = ""
+    def __init__(self,
+            base_url: str,
+            session: AsyncSession,
+            http_client: ClientSession,
+            name: str = "",
+            category_name: str = "doc"):
 
-    @property
-    @abstractmethod
-    def __api_class__(self)-> remotes.RemoteContentApi:
-        pass
+        self._name = name
 
-    def __init__(self, base_url: str, session: AsyncSession, http_client: ClientSession):
         self._dal = dals.PageDal(
                 session,
-                self.__category_name__,
-                prefix = self.__prefix__,
+                category_name,
             )
-        self._api = self.__api_class__(
+
+        self._api = remotes.RemoteContentApi(
                 base_url,
                 http_client,
+            )
+
+    async def get(self) -> schema.ViewsDoc:
+        entry, documentation = await asyncio.gather(
+                self._api.get(self._name),
+                self._dal.get(self._name)
+                )
+        return schema.ViewsDoc(
+                    entry = entry,
+                    page = documentation
                 )
 
-    async def get(self, path: str) -> schema.AnnotatedProxiedDocumentation:
-        data, documentation = await asyncio.gather(
-                self._api.get(path),
-                self._dal.get(path)
-                )
-        return schema.AnnotatedProxiedDocumentation(
-                    proxied = data,
-                    documentation = documentation
-                )
+    async def add(self, posted: schema.ViewsDoc, author: Optional[str] = None) -> None:
+        await self._dal.add(self._name, posted.content, author)
 
-    async def add(self, 
-            path: str, posted: schema.PostedDocumentation, author: Optional[str] = None) -> None:
-        await self._dal.add(path, posted.content, author)
-
-    async def list(self) -> List[schema.RemoteLocation]:
+    async def list(self) -> List[schema.DocumentationEntry]:
         pages = await self._api.list()
         return pages
-
-class TableDocumentationOperations(DocumentationOperations):
-    __api_class__ = remotes.TableApi
-    __category_name__ = "tables"
-
-class TransformDocumentationOperations(DocumentationOperations):
-    __api_class__ = remotes.TransformApi
-    __category_name__ = "transforms"
-
-class ColumnDocumentationOperations(DocumentationOperations):
-    __api_class__ = remotes.ColumnApi
-    __prefix__ = "tables"
-
-    def __init__(self, base_url: str,
-            session: AsyncSession, http_client: ClientSession,
-            table_name: str):
-        logger.critical("It's a column")
-        self.__category_name__ = table_name
-        super().__init__(base_url, session, http_client)
