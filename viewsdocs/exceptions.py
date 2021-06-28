@@ -6,6 +6,8 @@ class RemoteError(ValueError):
             message: str = "",
             status_code: Optional[int] = None):
 
+        self.status_code = status_code
+
         if data:
             message += " Received " + str(data)
         if status_code:
