@@ -47,7 +47,7 @@ def handshake():
 async def get(ops:Optional[CrudOperations] = Depends(get_ops))-> schema.ViewsDoc:
     if ops is None:
         return Response(status_code = 404)
-    pages = await ops.list()
+    pages = await ops.get()
     return pages
 
 @app.post("/docs/{kind:str}{location:path}")

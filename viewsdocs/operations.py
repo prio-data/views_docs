@@ -33,14 +33,14 @@ class DocumentationOperations():
                 http_client,
             )
 
-    async def get(self, path: str) -> schema.ViewsDoc:
-        data, documentation = await asyncio.gather(
-                self._api.get(path),
-                self._dal.get(path)
+    async def get(self) -> schema.ViewsDoc:
+        entry, documentation = await asyncio.gather(
+                self._api.get(self._name),
+                self._dal.get(self._name)
                 )
         return schema.ViewsDoc(
-                    proxied = data,
-                    documentation = documentation
+                    entry = entry,
+                    page = documentation
                 )
 
     async def add(self, posted: schema.ViewsDoc, author: Optional[str] = None) -> None:
