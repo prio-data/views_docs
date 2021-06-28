@@ -6,7 +6,8 @@ from datetime import datetime
 from typing import Optional, Any, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from . import models, schema
+import views_schema as schema
+from . import models
 
 logger = logging.getLogger(__name__)
 
@@ -98,15 +99,15 @@ class PageDal(AsyncDal):
             page.author = author
         return page
 
-    async def get(self, path: str)-> schema.DocumentationPageDetail:
+    async def get(self, path: str)-> Optional[schema.DocumentationPageDetail]:
         """
-        Get the documentation data associated with a path.
+        Get the documentation data associated with a path if it exists.
 
         Args:
             path(str): The path associated with desired content
 
         Returns:
-            schema.DocumentationPageDetail
+            Optional[schema.DocumentationPageDetail]
         """
 
         page = await self._get(self._path_to_pk(path))
@@ -115,12 +116,12 @@ class PageDal(AsyncDal):
         else:
             return None
 
-    async def list(self) -> List[schema.DocumentationPage]:
+    async def list(self) -> List[schema.DocumentationPageListEntry]:
         """
         Gets a list of documentation pages associated with the class category.
 
         Returns:
-            List[schema.DocumentationPage]
+            List[schema.DocumentationPageListEntry]
         """
         statement = (
                 select(self.__db_model__)

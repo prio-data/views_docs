@@ -20,5 +20,5 @@ def remote(kind: str):
             "columns": config("BASE_DATA_RETRIEVER_URL") + "/tables",
             "transforms": config("TRANSFORMER_URL") + "/transforms",
         }
-    return remotes[kind]
+    return remotes.get(kind)
 

@@ -1,15 +1,14 @@
 
-import asyncio
 from typing import Protocol, Optional, List
-from sqlalchemy.ext.asyncio import AsyncSession
 from aiohttp import ClientSession
 from fastapi import FastAPI, Depends, Response
-from . import operations, schema, models, db, settings, __version__
+import views_schema as schema
+from . import operations, models, db, settings, __version__
 
 app = FastAPI()
 
 class CrudOperations(Protocol):
-    async def add(self, key:str, to_add:schema.PostedDocumentation)-> None:
+    async def add(self, key:str, to_add: schema.PostedDocumentationPage)-> None:
         """
         Add posted data to the documentation database, under the provided key
         """
@@ -17,72 +16,45 @@ class CrudOperations(Protocol):
         """
         Get documentation pertaining to the key
         """
-    async def list(self) -> List[schema.DocumentationPage]:
+    async def list(self) -> List[schema.DocumentationPageListEntry]:
         """
         List available documentation
         """
 
-async def get_ops(
-        kind:str,
-        name:Optional[str] = None,
-        sub_name:Optional[str] = None)-> Optional[CrudOperations]:
+async def get_ops(kind:str, location:str) -> Optional[CrudOperations]:
     async with ClientSession() as http_client:
         async with db.Session() as session:
             base_url = settings.remote(kind)
-            args = [base_url, session, http_client]
-
-            if kind == "tables":
-                if sub_name is None:
-                    ops = operations.TableDocumentationOperations
-                else:
-                    args.append(name)
-                    ops = operations.ColumnDocumentationOperations
-            elif kind == "transforms":
-                ops = operations.TransformDocumentationOperations
-            elif kind == "columns":
-                args.append(name)
-            else:
+            if base_url is None:
                 yield None
-            yield ops(*args)
+
+            location = location.split("/")
+            base_url += "/".join(location[:-1])
+            category_name = "_".join([kind] + location)
+            doc_name = "".join(location[-1:])
+
+            yield operations.DocumentationOperations(
+                    base_url, session, http_client,
+                    name = doc_name,
+                    category_name = category_name
+                )
 
 @app.get("/")
 def handshake():
     return {"version":__version__}
 
-@app.get("/docs/{kind:str}")
-async def list(ops:Optional[CrudOperations] = Depends(get_ops)):#-> List[schema.DocumentationPage]:
+@app.get("/docs/{kind:str}/{location:path}")
+async def get(ops:Optional[CrudOperations] = Depends(get_ops))-> schema.ViewsDoc:
     if ops is None:
         return Response(status_code = 404)
     pages = await ops.list()
     return pages
 
-@app.get("/docs/{kind:str}/{name:str}")
-async def show(name:str, ops:Optional[CrudOperations] = Depends(get_ops)
-        ) -> schema.AnnotatedProxiedDocumentation:
+@app.post("/docs/{kind:str}/{location:path}")
+async def post(
+        posted: schema.PostedDocumentationPage,
+        ops:Optional[CrudOperations] = Depends(get_ops)) -> schema.ViewsDoc:
     if ops is None:
         return Response(status_code = 404)
-    page = await ops.get(name)
-    return page
-
-@app.post("/docs/{kind:str}/{name:str}")
-async def post(name:str, posted:schema.PostedDocumentation,
-        ops:Optional[CrudOperations] = Depends(get_ops)) -> Response:
-    if ops is None:
-        return Response(status_code = 404)
-    await ops.add(name, posted)
-    return Response(status_code = 201)
-
-@app.get("/docs/{kind:str}/{name:str}/{sub_name:str}")
-async def show_sub(name:str, sub_name:str, ops:Optional[CrudOperations] = Depends(get_ops)):
-    if ops is None:
-        return Response(status_code = 404)
-    page = await ops.get(name+"/"+sub_name)
-    return page
-
-@app.post("/docs/{kind:str}/{name:str}/{sub_name:str}")
-async def post_sub(name:str, sub_name:str, posted:schema.PostedDocumentation,
-        ops:Optional[CrudOperations] = Depends(get_ops)) -> Response:
-    if ops is None:
-        return Response(status_code = 404)
-    await ops.add(name+"/"+sub_name, posted)
+    await ops.add(posted)
     return Response(status_code = 201)
