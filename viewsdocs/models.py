@@ -14,7 +14,7 @@ class DocumentationPage(Base):
 
     last_edited = Column(DateTime, default = datetime.now)
     content= Column(Text)
-    author = Column(String)
+    author = Column(String, default = lambda: "anonymous", nullable = False)
 
     def __init__(self, category: str, name: str):
         self.category = name
