@@ -32,3 +32,6 @@ def ensure_certs():
                 f.write(client.get_secret(secret_name).value)
         else:
             logger.warning("Cert %s already exists at %s", secret_name, file_name)
+
+if __name__ == "__main__":
+    ensure_certs()
