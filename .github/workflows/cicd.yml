@@ -28,7 +28,7 @@ jobs:
       - name: Login to meta-reg 
         uses: actions-hub/docker/login@master 
         env:
-          DOCKER_REGISTRY_URL: ${{ secrets.BASE_DOCKER_REGISTRY_URL }}
+          DOCKER_REGISTRY_URL: ${{ secrets.DOCKER_BASE_REGISTRY_URL }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 

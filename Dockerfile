@@ -1,10 +1,7 @@
-FROM prioreg.azurecr.io/uvicorn-deployment 
+FROM prioreg.azurecr.io/prio-data/uvicorn_deployment:1.2.0
 
 COPY requirements.txt /
 RUN pip install -r requirements.txt
-
-#COPY --from=asyncpg-branch /asyncpg /asyncpg/
-#RUN pip install --upgrade /asyncpg
 
 RUN sed 's/SECLEVEL=[0-9]/SECLEVEL=1/g' /etc/ssl/openssl.cnf > /etc/ssl/openssl.cnf
 
