@@ -18,10 +18,17 @@ jobs:
         id: make_tag
         run: echo ::set-output name=TAG::$(echo ${{ secrets.DOCKER_REGISTRY_URL }}/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }})
 
-      - name: Login
+      - name: Login to img-reg 
         uses: actions-hub/docker/login@master 
         env:
           DOCKER_REGISTRY_URL: ${{ secrets.DOCKER_REGISTRY_URL }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Login to meta-reg 
+        uses: actions-hub/docker/login@master 
+        env:
+          DOCKER_REGISTRY_URL: ${{ secrets.BASE_DOCKER_REGISTRY_URL }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
