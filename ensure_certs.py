@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 def ensure_certs():
     to_get = [
-        #("views-root-cert", "views-root.crt"),
+        ("views-root-cert", "views-root.crt"),
         ("views-cert", "views.crt"),
         ("views-key", "views.key"),
     ]
