@@ -10,16 +10,17 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Get version
+      - name: Version from commit tag 
         id: get_version
         run: echo ::set-output name=VERSION::$(echo $GITHUB_REF | cut -d / -f 3)
 
-      - name: Make tag
-        id: make_tag
-        run: echo ::set-output name=TAG::$(echo ${{ secrets.DOCKER_REGISTRY_URL }}/${{ github.repository }}:${{ steps.get_version.outputs.VERSION }})
+      - name: Make repo name 
+        id: make_name
+        run: echo ::set-output name=NAME::$(echo ${{ github.repository }} | awk '{print tolower ($0)}')
 
       - name: Login to base registry 
         uses: docker/login-action@v1 
+        if: ${{ !env.ACT }}
         with:
           registry: ${{ secrets.DOCKER_BASE_REGISTRY_URL }}
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -27,14 +28,24 @@ jobs:
 
       - name: Login to project registry 
         uses: docker/login-action@v1 
+        if: ${{ !env.ACT }}
         with:
           registry: ${{ secrets.DOCKER_REGISTRY_URL }}
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Log what to do
+        run: |
+          echo "Building and pushing ${{ secrets.DOCKER_REGISTRY_URL }}/${{ steps.make_name.outputs.NAME }}:${{ steps.get_version.outputs.VERSION }}"
+          echo "Building and pushing ${{ secrets.DOCKER_REGISTRY_URL }}/${{ steps.make_name.outputs.NAME }}:latest"
+
 
       - name: Build and push
         uses: docker/build-push-action@v2
+        if: ${{ !env.ACT }}
         with:
           context: .
           push: true
-          tags: ${{ steps.make_tag.outputs.TAG }}
+          tags: |
+            ${{ secrets.DOCKER_REGISTRY_URL }}/${{ steps.make_name.outputs.NAME }}:${{ steps.get_version.outputs.VERSION }}
+            ${{ secrets.DOCKER_REGISTRY_URL }}/${{ steps.make_name.outputs.NAME }}:latest
