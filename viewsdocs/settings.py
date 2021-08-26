@@ -1,24 +1,17 @@
 
-from functools import lru_cache
-from azure.identity import DefaultAzureCredential
+import logging
 from environs import Env
-from fitin import views_config, seek_config
+
+logger = logging.getLogger(__name__)
 
 env = Env()
+config = env
 
-remote_config = views_config(env.str("KEY_VAULT_URL"), DefaultAzureCredential())
-
-@lru_cache(maxsize=None)
-def config(key: str):
-    return seek_config(resolvers = [
-            remote_config
-        ])(key)
+REMOTES = {
+        "tables": config("BASE_DATA_RETRIEVER_URL") + "/tables",
+        "columns": config("BASE_DATA_RETRIEVER_URL") + "/tables",
+        "transforms": config("TRANSFORMER_URL") + "/transforms",
+    }
 
 def remote(kind: str):
-    remotes = {
-            "tables": config("BASE_DATA_RETRIEVER_URL") + "/tables",
-            "columns": config("BASE_DATA_RETRIEVER_URL") + "/tables",
-            "transforms": config("TRANSFORMER_URL") + "/transforms",
-        }
-    return remotes.get(kind)
-
+    return REMOTES.get(kind)

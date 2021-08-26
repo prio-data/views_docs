@@ -7,7 +7,3 @@ RUN sed 's/SECLEVEL=[0-9]/SECLEVEL=1/g' /etc/ssl/openssl.cnf > /etc/ssl/openssl.
 
 COPY ./viewsdocs/* /viewsdocs/
 ENV APP="viewsdocs.app:app"
-
-COPY ensure_certs.py / 
-COPY init.sh / 
-CMD ["bash","init.sh"]
