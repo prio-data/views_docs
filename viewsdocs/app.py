@@ -1,4 +1,5 @@
 
+import sys
 from typing import Protocol, Optional, List
 from aiohttp import ClientSession
 from fastapi import FastAPI, Depends, Response
@@ -44,14 +45,14 @@ def handshake():
     return {"version":__version__}
 
 @app.get("/docs/{kind:str}{location:path}")
-async def get(ops:Optional[CrudOperations] = Depends(get_ops))-> schema.ViewsDoc:
+async def get(kind: str, ops:Optional[CrudOperations] = Depends(get_ops))-> schema.ViewsDoc:
     if ops is None:
-        return Response(status_code = 404)
+        return Response(f"Could not find url for {kind}",status_code = 404)
     try:
         pages = await ops.get()
     except exceptions.RemoteError as re:
         if re.status_code == 404:
-            return Response(status_code = 404)
+            return Response(str(re), status_code = 404)
         else:
             raise re
     return pages
