@@ -1,5 +1,6 @@
 
 import sys
+import logging
 from typing import Protocol, Optional, List
 from aiohttp import ClientSession
 from fastapi import FastAPI, Depends, Response
@@ -7,6 +8,8 @@ import views_schema as schema
 from . import operations, models, db, settings, __version__, exceptions
 
 app = FastAPI()
+
+logging.basicConfig(level = getattr(logging, settings.config.str("LOG_LEVEL", "WARNING").upper()))
 
 class CrudOperations(Protocol):
     async def add(self, key:str, to_add: schema.PostedDocumentationPage)-> None:
