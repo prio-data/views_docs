@@ -9,7 +9,7 @@ from . import operations, models, db, settings, __version__, exceptions
 
 app = FastAPI()
 
-logging.basicConfig(level = getattr(logging, settings.config.str("LOG_LEVEL", "WARNING").upper()))
+logging.basicConfig(level = getattr(logging, settings.LOG_LEVEL))
 
 class CrudOperations(Protocol):
     async def add(self, key:str, to_add: schema.PostedDocumentationPage)-> None:
