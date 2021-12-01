@@ -8,13 +8,13 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 import asyncpg
 
-from .settings import config
+from . import settings
 
 logger = logging.getLogger(__name__)
 
 connect_args = {}
 
-if config.bool("DB_SSL", False):
+if settings.DB_SSL:
     cert_path = lambda x: os.path.expanduser(f"~/.postgresql/{x}")
     logger.critical("READY")
 
@@ -41,10 +41,11 @@ if config.bool("DB_SSL", False):
 
     connect_args.update({"ssl": ssl_context})
 
+user_string = settings.DB_USER + ":" + settings.DB_PASSWORD if settings.DB_PASSWORD else settings.DB_USER
 
 connection_string = (
             "postgresql+asyncpg://"
-            f"{config('DB_USER')}@{config('DB_HOST')}:{config('DB_PORT')}/{config('DB_NAME')}"
+            f"{user_string}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
         )
 
 engine = create_async_engine(connection_string, connect_args = connect_args)
